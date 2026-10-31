@@ -1,37 +1,33 @@
-# WOL Inteligente v9
+# WOL Inteligente v10
 
-Buscador y asistente de investigación que consulta exclusivamente artículos de la Biblioteca en línea Watchtower (WOL).
+La v10 convierte el buscador en un investigador general, no en un sistema construido alrededor de un tema concreto.
 
-## Cambios de v9
-- Extracción más tolerante de enlaces de artículos de WOL, incluidos enlaces relativos y distintos contenedores HTML.
-- Registros técnicos en Render para distinguir errores HTTP, páginas recibidas sin enlaces reconocibles y cantidad de candidatos encontrados.
-- Más consultas complementarias para temas de desánimo, vejez y edad avanzada.
-- Evaluación con respaldo local: si la IA descarta todos los candidatos, se recuperan artículos pertinentes mediante coincidencias ampliadas; también se agregan unos pocos candidatos locales cuando ayudan a mejorar la cobertura.
-- Se revisan hasta 30 artículos únicos en la primera etapa.
-- La interfaz conserva el diseño sencillo de la versión anterior y muestra únicamente títulos, datos bibliográficos disponibles y enlaces directos a WOL.
-- No genera resúmenes ni respuestas doctrinales.
+Para cada pregunta:
+- entiende la necesidad real;
+- genera un mapa interno de conceptos, sinónimos, situaciones, acciones y vocabulario probable de WOL;
+- hace 8-12 búsquedas complementarias;
+- reúne y lee artículos reales;
+- evalúa pertinencia contra la necesidad, no contra una palabra;
+- detecta huecos y puede hacer una segunda ronda de búsquedas;
+- muestra solo artículos originales de WOL.
 
-## Instalación en Render
-Build command:
-```bash
-pip install -r requirements.txt
-```
+La interfaz no muestra el razonamiento interno, las consultas generadas ni resúmenes.
 
-Start command:
-```bash
-uvicorn main:app --host 0.0.0.0 --port $PORT
-```
+Render:
+Build: `pip install -r requirements.txt`
+Start: `uvicorn main:app --host 0.0.0.0 --port $PORT`
 
-Variables de entorno:
-- `OPENAI_API_KEY`: configurar como variable privada en Render. Nunca subirla a GitHub.
-- `OPENAI_MODEL`: modelo disponible para tu API. Si ya está configurado en Render, se conserva.
+Variables:
+- `OPENAI_API_KEY`: privada.
+- `OPENAI_MODEL`: conservar el modelo que ya funciona.
 
-Health check: `/health` (debe informar versión `9.0`).
+`/health` debe informar versión `10.0`.
 
-## Prueba recomendada
-Después de desplegar, buscar exactamente: **Cómo afrontar el desánimo en la vejez**. WOL tiene artículos conocidos sobre la alegría en la vejez y las dificultades de la edad avanzada; esta consulta sirve como prueba de regresión.
-
-## Privacidad y alcance
-- El texto de WOL se procesa temporalmente para evaluar relevancia. No se guarda en una base de datos ni se envía a la interfaz.
-- La aplicación muestra enlaces a los artículos originales; no reproduce el contenido completo.
-- La versión debe probarse desplegada contra WOL y la API configurada antes de considerarse validada.
+Pruebas recomendadas:
+- Cómo conducir el Estudio de La Atalaya.
+- Cómo ayudar a alguien que está desanimado.
+- Cómo preparar un discurso.
+- Cómo enseñar a un hijo a orar.
+- Qué hacer cuando cuesta concentrarse al estudiar.
+- Preguntas sobre personajes o acontecimientos bíblicos.
+- Preguntas coloquiales donde WOL probablemente use vocabulario diferente.
