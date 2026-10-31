@@ -3,76 +3,82 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WOL Inteligente v5</title>
+<title>WOL Inteligente v6</title>
 <style>
-:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#18202a;background:#f4f6fa}
-*{box-sizing:border-box}body{margin:0}main{max-width:820px;margin:auto;padding:24px 16px 48px}
-.card{background:#fff;border:1px solid #e5e7eb;border-radius:20px;padding:22px;box-shadow:0 8px 30px #0000000d}
-h1{margin:0;font-size:28px}.sub{color:#667085;margin:6px 0 20px}
-textarea{width:100%;min-height:125px;border:1px solid #cfd4dc;border-radius:14px;padding:14px;font:inherit;resize:vertical}
-button{width:100%;margin-top:12px;border:0;border-radius:13px;padding:14px;font:inherit;font-weight:750;background:#1261a0;color:#fff}
-button:disabled{opacity:.6}.panel{margin-top:16px;border:1px solid #e5e7eb;border-radius:15px;padding:15px}
-.label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#667085;font-weight:750}
-.value{margin-top:5px}.tags{margin-top:8px}.tag{display:inline-block;padding:5px 9px;border-radius:999px;background:#eef4ff;margin:3px;font-size:13px}
-.result{border:1px solid #e5e7eb;border-radius:15px;padding:15px;margin-top:10px}
-.result a{display:inline-block;margin-top:9px;color:#1261a0;font-weight:750;text-decoration:none}
-.badge{display:inline-block;font-size:12px;padding:5px 8px;border-radius:999px;background:#ecfdf3;color:#067647;margin-bottom:10px}
-.badge.local{background:#fff7ed;color:#9a3412}.error{color:#b42318}
-.small{font-size:13px;color:#667085}.hidden{display:none}
+body{font-family:Arial,sans-serif;max-width:900px;margin:auto;padding:20px;background:#111;color:#eee}
+textarea{width:100%;min-height:120px;padding:12px;box-sizing:border-box;border-radius:10px}
+button{margin-top:10px;padding:12px 18px;border:0;border-radius:10px;cursor:pointer}
+.card{background:#1d1d1d;padding:15px;margin:12px 0;border-radius:12px}
+a{color:#8ecbff}.muted{color:#aaa}.error{color:#ff9b9b}
 </style>
 </head>
 <body>
-<main>
-<section class="card">
-<h1>WOL INTELIGENTE <span class="small">v5</span></h1>
-<div class="sub">Preguntá con tus propias palabras. La IA interpreta la intención y genera búsquedas para WOL.</div>
-<textarea id="q" placeholder="Ej.: ¿Qué puedo hacer si tengo poco dinero?"></textarea>
-<button id="go">INTERPRETAR Y BUSCAR EN WOL</button>
-<div id="status" class="small"></div>
-<div id="interpretation" class="hidden"></div>
-<div id="results"></div>
-</section>
-</main>
-<script>
-const q=document.querySelector('#q'),go=document.querySelector('#go'),status=document.querySelector('#status');
-const interpretation=document.querySelector('#interpretation'),results=document.querySelector('#results');
+<h1>WOL Inteligente <small>v6</small></h1>
+<p class="muted">Pregunta en lenguaje natural. La IA interpreta; los resultados vienen de WOL.</p>
 
-function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
-function wolUrl(query){
-  const u=new URL('https://wol.jw.org/es/wol/s/r4/lp-s');
-  u.searchParams.set('q',query);
-  u.searchParams.set('r','occ');
-  u.searchParams.set('st','e');
-  return u.toString();
+<textarea id="question" placeholder="Ejemplo: ¿Cómo puedo ayudar a alguien que está desanimado?"></textarea>
+<br>
+<button onclick="searchWol()">INTERPRETAR Y BUSCAR EN WOL</button>
+
+<div id="status"></div>
+<div id="interpretation"></div>
+<div id="articles"></div>
+
+<script>
+function esc(s){
+  return String(s ?? "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
 }
-function render(data){
-  const ai=data.mode==='ai';
-  status.innerHTML='<span class="badge '+(ai?'':'local')+'">'+(ai?'Modo IA':'Modo local de respaldo')+'</span>';
-  interpretation.classList.remove('hidden');
-  interpretation.innerHTML=`
-    <div class="panel"><div class="label">Intención</div><div class="value">${esc(data.intent)}</div></div>
-    <div class="panel"><div class="label">Tema</div><div class="value">${esc(data.topic)}</div></div>
-    <div class="panel"><div class="label">Situación / contexto</div><div class="value">${esc(data.context)}</div></div>
-    <div class="panel"><div class="label">Objetivo</div><div class="value">${esc(data.goal)}</div></div>
-    <div class="panel"><div class="label">Conceptos relacionados</div><div class="tags">${(data.concepts||[]).map(x=>'<span class="tag">'+esc(x)+'</span>').join('')}</div></div>`;
-  results.innerHTML='<div class="panel"><div class="label">Búsquedas propuestas</div>'+
-    (data.queries||[]).map((x,i)=>`<div class="result"><b>${i+1}. ${esc(x)}</b><br><a target="_blank" rel="noopener" href="${wolUrl(x)}">ABRIR RESULTADOS EN WOL →</a></div>`).join('')+
-    '</div>';
-}
-async function run(){
-  const question=q.value.trim();
-  if(!question){status.innerHTML='<span class="error">Escribí una pregunta.</span>';return}
-  go.disabled=true;results.innerHTML='';interpretation.classList.add('hidden');status.textContent='Interpretando la intención…';
+
+async function searchWol(){
+  const q=document.getElementById("question").value.trim();
+  const status=document.getElementById("status");
+  const interpretation=document.getElementById("interpretation");
+  const articles=document.getElementById("articles");
+
+  if(!q){status.innerHTML='<p class="error">Escribí una pregunta.</p>';return;}
+
+  status.innerHTML="<p>Buscando en WOL…</p>";
+  interpretation.innerHTML="";
+  articles.innerHTML="";
+
   try{
-    const r=await fetch('/api/search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question})});
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    render(await r.json());
+    const r=await fetch("/api/search",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({question:q})
+    });
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const d=await r.json();
+
+    interpretation.innerHTML=`
+      <div class="card">
+        <b>Intención:</b> ${esc(d.intent)}<br>
+        <b>Tema:</b> ${esc(d.topic)}<br>
+        <b>Contexto:</b> ${esc(d.context)}<br>
+        <b>Objetivo:</b> ${esc(d.goal)}<br>
+        <b>Conceptos:</b> ${esc((d.concepts||[]).join(", "))}
+      </div>`;
+
+    const items=d.articles||[];
+    if(!items.length){
+      articles.innerHTML='<div class="card"><b>No se encontraron artículos.</b><br>Podés abrir las búsquedas propuestas directamente en WOL.</div>';
+    }else{
+      articles.innerHTML="<h2>Artículos encontrados en WOL</h2>"+
+        items.map((x,i)=>`<div class="card">
+          <b>${i+1}. ${esc(x.title)}</b><br>
+          <a href="${esc(x.url)}" target="_blank" rel="noopener">ABRIR ARTÍCULO EN WOL →</a>
+          <div class="muted">Búsqueda: ${esc(x.query)}</div>
+        </div>`).join("");
+    }
+
+    status.innerHTML=`<p>Listo. ${items.length} artículo(s) encontrados.</p>`;
   }catch(e){
-    status.innerHTML='<span class="error">No se pudo contactar al servidor. Verificá que la aplicación esté ejecutándose.</span>';
-  }finally{go.disabled=false}
+    console.error(e);
+    status.innerHTML='<p class="error">No se pudo conectar al servidor.</p>';
+  }
 }
-go.onclick=run;
-q.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')run()});
 </script>
 </body>
 </html>

@@ -1,53 +1,40 @@
-
 import os
+import json
+import re
 from pathlib import Path
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urljoin
 
+import requests
+from bs4 import BeautifulSoup
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 load_dotenv()
 
 BASE = Path(__file__).resolve().parent
-app = FastAPI(title="WOL Inteligente v5")
+WOL_BASE = "https://wol.jw.org/es/"
+WOL_SEARCH = "https://wol.jw.org/es/wol/s/r4/lp-s"
+app = FastAPI(title="WOL Inteligente v6")
 
 class SearchRequest(BaseModel):
     question: str = Field(min_length=2, max_length=2000)
-    filter: str = ""
 
 SYSTEM_PROMPT = """
 Sos el intérprete semántico de WOL Inteligente.
 
-Tu única función es transformar una pregunta natural del usuario en una estrategia
-de búsqueda para la Biblioteca en línea Watchtower (WOL). NO respondas la pregunta.
-NO redactes doctrina. NO cites fuentes externas. NO inventes contenido de WOL.
+Tu única función es transformar una pregunta natural en una estrategia de búsqueda
+para la Biblioteca en línea Watchtower (WOL). NO respondas la pregunta. NO redactes
+doctrina. NO uses fuentes externas. NO inventes contenido.
 
-Interpretá:
-- qué intenta encontrar la persona;
-- el tema concreto;
-- la situación o contexto;
-- el objetivo de la búsqueda;
-- conceptos y expresiones que probablemente aparezcan en WOL.
+Interpretá intención, tema, contexto, objetivo y conceptos útiles para encontrar
+información en WOL. Generá exactamente 3 consultas concisas y distintas:
+1) tema principal;
+2) sinónimos o términos relacionados;
+3) situación/objetivo.
 
-Generá exactamente 3 consultas para WOL. Deben ser semánticamente distintas:
-1) la expresión principal del tema;
-2) una formulación con sinónimos o términos relacionados;
-3) una formulación orientada a la situación/objetivo.
-
-Las consultas deben ser concisas, naturales y útiles para una búsqueda textual
-en WOL. No las conviertas en preguntas largas. No agregues explicaciones dentro
-de las consultas.
-
-Si la pregunta usa términos coloquiales, traducilos a conceptos de búsqueda
-más precisos. Por ejemplo, "¿cómo hago para que la Atalaya no sea aburrida?"
-debería orientarse hacia conductor del Estudio de La Atalaya, participación,
-enseñanza, preparación o hacer interesante el estudio; no limitarse a buscar
-"aburrida".
-
-La salida debe contener:
-intent, topic, context, goal, concepts y queries.
+La salida debe contener: intent, topic, context, goal, concepts y queries.
 """
 
 JSON_SCHEMA = {
@@ -65,7 +52,6 @@ JSON_SCHEMA = {
 }
 
 def local_fallback(q: str):
-    # Respaldo explícito: NO pretende ser IA. Solo mantiene la app funcional.
     s = q.lower()
     concepts = []
     groups = [
@@ -104,7 +90,6 @@ def ai_interpret(question: str):
     model = os.getenv("OPENAI_MODEL", "gpt-6-luna")
     if not api_key:
         return None
-
     try:
         from openai import OpenAI
         client = OpenAI(api_key=api_key)
@@ -122,7 +107,6 @@ def ai_interpret(question: str):
             },
             max_output_tokens=700,
         )
-        import json
         data = json.loads(response.output_text)
         if len(data.get("queries", [])) != 3:
             return None
@@ -133,13 +117,83 @@ def ai_interpret(question: str):
         print("AI interpretation error:", repr(exc))
         return None
 
+def wol_search_url(query: str) -> str:
+    return f"{WOL_SEARCH}?q={quote_plus(query)}&r=occ&st=e"
+
+def fetch_wol_results(query: str, limit: int = 5):
+    """Obtiene títulos/enlaces de la página de resultados de WOL.
+    No guarda el contenido: solo usa la respuesta para mostrar resultados al usuario.
+    """
+    url = wol_search_url(query)
+    try:
+        r = requests.get(
+            url,
+            timeout=15,
+            headers={
+                "User-Agent": "WOL-Inteligente/6.0 (búsqueda de resultados WOL)"
+            },
+        )
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, "html.parser")
+
+        results = []
+        seen = set()
+
+        # WOL suele presentar resultados como enlaces a /wol/d/...
+        for a in soup.find_all("a", href=True):
+            href = a.get("href", "").strip()
+            title = " ".join(a.get_text(" ", strip=True).split())
+
+            if not title:
+                continue
+
+            absolute = urljoin("https://wol.jw.org", href)
+            if "/wol/d/" not in absolute:
+                continue
+            if absolute in seen:
+                continue
+
+            # Evita enlaces de navegación que no sean artículos.
+            if len(title) < 4:
+                continue
+
+            seen.add(absolute)
+            results.append({
+                "title": title,
+                "url": absolute,
+                "query": query,
+            })
+
+            if len(results) >= limit:
+                break
+
+        return {
+            "query": query,
+            "search_url": url,
+            "results": results,
+            "error": None,
+        }
+
+    except Exception as exc:
+        print("WOL search error:", repr(exc))
+        return {
+            "query": query,
+            "search_url": url,
+            "results": [],
+            "error": "No se pudo consultar WOL en este momento.",
+        }
+
 @app.get("/")
 def home():
     return FileResponse(BASE / "index.html")
 
 @app.get("/health")
 def health():
-    return {"ok": True, "ai_configured": bool(os.getenv("OPENAI_API_KEY"))}
+    return {
+        "ok": True,
+        "ai_configured": bool(os.getenv("OPENAI_API_KEY")),
+        "wol_enabled": True,
+    }
 
 @app.post("/api/search")
 def search(req: SearchRequest):
@@ -147,5 +201,20 @@ def search(req: SearchRequest):
     if result is None:
         result = local_fallback(req.question)
         result["ai_error"] = True
-    result["wol_domain"] = "https://wol.jw.org/es/"
+
+    queries = result.get("queries", [])
+    wol_results = [fetch_wol_results(q, limit=5) for q in queries]
+
+    # Deduplicar artículos manteniendo el mejor orden de aparición.
+    merged = []
+    seen = set()
+    for group in wol_results:
+        for item in group["results"]:
+            if item["url"] not in seen:
+                seen.add(item["url"])
+                merged.append(item)
+
+    result["wol_domain"] = WOL_BASE
+    result["wol_searches"] = wol_results
+    result["articles"] = merged[:12]
     return result

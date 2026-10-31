@@ -1,19 +1,23 @@
-# WOL Inteligente v5.1 — Render
+# WOL Inteligente v6 — prueba
 
-Aplicación FastAPI de un solo servicio: frontend + API.
+Flujo:
+Pregunta natural → IA interpreta → 3 búsquedas → WOL → títulos y enlaces de artículos.
+
+La IA NO responde la pregunta religiosa. Los artículos y enlaces mostrados provienen de WOL.
 
 ## Render
+Build:
+pip install -r requirements.txt
 
-Usar un Web Service conectado a este repositorio.
+Start:
+uvicorn main:app --host 0.0.0.0 --port $PORT
 
-- Runtime: Python 3
-- Build Command: `pip install -r requirements.txt`
-- Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+Variables:
+OPENAI_API_KEY
+OPENAI_MODEL=gpt-6-luna
 
-Variables de entorno:
-- `OPENAI_API_KEY` = tu clave privada
-- `OPENAI_MODEL` = el modelo de OpenAI que quieras utilizar
+## Prueba
+Antes de subir esta versión a Render, probar:
+¿Cómo puedo ayudar a alguien que está desanimado?
 
-No subas una clave real a GitHub.
-
-La aplicación sirve la interfaz en `/` y la API en `/api/search`.
+Debe mostrar artículos de WOL con botón "ABRIR ARTÍCULO EN WOL".
