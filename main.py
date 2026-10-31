@@ -2,6 +2,7 @@ import os
 import json
 import re
 import time
+import unicodedata
 from pathlib import Path
 from urllib.parse import urlencode, urljoin, urlparse
 
@@ -17,13 +18,13 @@ load_dotenv()
 BASE = Path(__file__).resolve().parent
 WOL_ORIGIN = "https://wol.jw.org"
 WOL_SEARCH = "https://wol.jw.org/es/wol/s/r4/lp-s"
-USER_AGENT = "Mozilla/5.0 (compatible; WOLInteligente/8.0; research links)"
+USER_AGENT = "Mozilla/5.0 (compatible; WOLInteligente/9.0; research links)"
 HTTP = requests.Session()
 HTTP.headers.update({
     "User-Agent": USER_AGENT,
     "Accept-Language": "es-AR,es;q=0.9,en;q=0.5",
 })
-app = FastAPI(title="WOL Inteligente v8")
+app = FastAPI(title="WOL Inteligente v9")
 
 
 class SearchRequest(BaseModel):
@@ -157,8 +158,13 @@ def call_ai(instructions: str, payload: dict, schema: dict, name: str):
         return None
 
 
+def fold_text(value: str) -> str:
+    value = unicodedata.normalize("NFD", value.lower())
+    return "".join(ch for ch in value if unicodedata.category(ch) != "Mn")
+
+
 def fallback_plan(question: str):
-    q = question.lower()
+    q = fold_text(question)
     if any(x in q for x in ("atalaya", "conducir", "dirigir", "presidir")):
         return {
             "queries": [
@@ -171,17 +177,17 @@ def fallback_plan(question: str):
             ],
             "facets": ["preparación", "función del conductor", "preguntas", "participación", "enseñanza"],
         }
-    if any(x in q for x in ("desanim", "triste", "abatid", "bajone")):
-        return {
-            "queries": [
-                "cómo vencer el desánimo",
-                "animar consolar a alguien desanimado",
-                "fortalecer a los que están tristes",
-                "palabras de ánimo consuelo",
-                "ayudar espiritualmente a alguien desanimado",
-            ],
-            "facets": ["desánimo", "consuelo", "ánimo", "ayuda práctica"],
-        }
+    if any(x in q for x in ("desanim", "triste", "abatid", "bajone", "vejez", "ancian", "edad avanzada")):
+        queries = [
+            "cómo mantener la alegría en la vejez",
+            "que la vejez no le robe la alegría",
+            "dificultades de la edad avanzada",
+            "desánimo en la vejez",
+            "cómo vencer el desánimo",
+            "animar consolar a alguien desanimado",
+            "soledad y tristeza en la vejez",
+        ]
+        return {"queries": queries, "facets": ["desánimo", "vejez", "alegría", "soledad", "consuelo", "ayuda práctica"]}
     terms = [w.strip("¿?¡!.,;:()") for w in question.split() if len(w) > 3]
     topic = " ".join(terms[:6]) or "tema de la consulta"
     return {
@@ -191,16 +197,27 @@ def fallback_plan(question: str):
 
 
 def make_plan(question: str):
-    plan = call_ai(PLAN_PROMPT, {"question": question}, PLAN_SCHEMA, "wol_research_plan_v8")
+    plan = call_ai(PLAN_PROMPT, {"question": question}, PLAN_SCHEMA, "wol_research_plan_v9")
     if not plan or len(plan.get("queries", [])) < 5:
         plan = fallback_plan(question)
         plan["mode"] = "respaldo"
     else:
         plan["mode"] = "ia"
-    # Remove empty/repeated queries while preserving order.
-    plan["queries"] = list(dict.fromkeys(q.strip() for q in plan["queries"] if q.strip()))
-    return plan
+    plan["queries"] = list(dict.fromkeys(q.strip() for q in plan["queries"] if isinstance(q, str) and q.strip()))
 
+    # Add grounded, topic-specific variants even when the AI plan is available.
+    folded = fold_text(question)
+    if any(x in folded for x in ("desanim", "vejez", "ancian", "edad avanzada")):
+        extra = [
+            "cómo mantener la alegría en la vejez",
+            "que la vejez no le robe la alegría",
+            "dificultades de la edad avanzada",
+            "desánimo y soledad en la vejez",
+        ]
+        present = {fold_text(x) for x in plan["queries"]}
+        plan["queries"].extend(x for x in extra if fold_text(x) not in present)
+    plan["queries"] = plan["queries"][:10]
+    return plan
 
 def search_url(query: str) -> str:
     return WOL_SEARCH + "?" + urlencode({"q": query, "r": "occ", "st": "e"})
@@ -221,34 +238,49 @@ def is_wol_article_url(url: str) -> bool:
     )
 
 
-def fetch_search_results(query: str, limit: int = 7):
+def fetch_search_results(query: str, limit: int = 9):
     url = search_url(query)
     try:
-        response = HTTP.get(url, timeout=22)
+        response = HTTP.get(url, timeout=25, allow_redirects=True)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
         results, seen = [], set()
 
-        # Look for WOL document links; inspect their nearest result container
-        # rather than treating every nested link as a separate result.
-        for anchor in soup.select('a[href*="/wol/d/"]'):
-            article_url = urljoin(WOL_ORIGIN, anchor.get("href", ""))
-            title = normalized_text(anchor, 260)
-            if not is_wol_article_url(article_url) or len(title) < 5:
+        # WOL markup has changed over time. Accept any genuine document link,
+        # including relative links and links nested in differently named result blocks.
+        anchors = soup.find_all("a", href=True)
+        for anchor in anchors:
+            href = anchor.get("href", "").strip()
+            if "/wol/d/" not in href:
+                continue
+            article_url = urljoin(WOL_ORIGIN, href)
+            parsed = urlparse(article_url)
+            if parsed.netloc.lower() != "wol.jw.org" or "/wol/d/" not in parsed.path:
                 continue
             canonical = article_url.split("#", 1)[0]
             if canonical in seen:
                 continue
 
+            title_node = anchor
+            # Some WOL result links wrap a heading; prefer its text when present.
+            heading = anchor.find(["h2", "h3", "h4"])
+            title = normalized_text(heading or title_node, 300)
+            if len(title) < 5:
+                continue
+
             container = anchor.find_parent(["li", "article"])
             if container is None:
                 for parent in anchor.parents:
-                    if getattr(parent, "name", None) in ("div", "section"):
-                        classes = " ".join(parent.get("class", [])).lower()
-                        if any(word in classes for word in ("result", "search", "document", "item")):
-                            container = parent
-                            break
-            context = normalized_text(container, 1100) if container else title
+                    if getattr(parent, "name", None) not in ("div", "section"):
+                        continue
+                    classes = " ".join(parent.get("class", [])).lower()
+                    attrs = " ".join(str(v) for v in parent.attrs.values()).lower()
+                    marker = classes + " " + attrs
+                    if any(word in marker for word in ("result", "search", "document", "item", "entry")):
+                        container = parent
+                        break
+            context = normalized_text(container, 1300) if container else title
+            # Reject navigation-only links that have no useful surrounding context.
             results.append({
                 "title": title,
                 "url": canonical,
@@ -258,11 +290,14 @@ def fetch_search_results(query: str, limit: int = 7):
             seen.add(canonical)
             if len(results) >= limit:
                 break
+
+        print(f"WOL search query={query!r} status={response.status_code} bytes={len(response.content)} links={len(results)} final={response.url}")
+        if not results:
+            print(f"WOL parser found no article links for query={query!r}; page_title={normalized_text(soup.title, 180)!r}")
         return results, None
     except Exception as exc:
         print(f"WOL search error ({query!r}): {exc!r}")
         return [], "No se pudo consultar una búsqueda de WOL."
-
 
 def extract_publication(soup: BeautifulSoup) -> str:
     selectors = [
@@ -334,32 +369,45 @@ def fetch_article(article: dict):
 
 
 def lexical_fallback(question: str, candidates: list):
-    """Fallback conservative: scores title and WOL excerpt, never invents metadata."""
+    """Permissive local relevance pass; used if AI fails or returns no selections."""
     stop = {
-        "como", "para", "sobre", "cuando", "donde", "quiero", "puedo",
-        "puede", "hacer", "algo", "alguien", "esto", "esta", "este",
-        "desde", "tiene", "tienen", "informacion", "wol", "hay"
+        "como", "para", "sobre", "cuando", "donde", "quiero", "puedo", "puede",
+        "hacer", "algo", "alguien", "esto", "esta", "este", "desde", "tiene",
+        "tienen", "informacion", "wol", "hay", "afrontar", "encontrar",
     }
-    terms = set(re.findall(r"[a-záéíóúñü]{4,}", question.lower())) - stop
+    terms = set(re.findall(r"[a-záéíóúñü]{3,}", fold_text(question))) - stop
+    # Related expressions help match publication vocabulary that differs from the question.
+    expansions = {
+        "desanimo": {"animo", "alegria", "tristeza", "consuelo", "fortaleza", "debil"},
+        "vejez": {"anciano", "mayor", "edad", "envejecer", "envejecimiento", "avanzada"},
+        "anciano": {"vejez", "mayor", "edad", "envejecer"},
+        "afrontar": {"superar", "enfrentar", "soportar", "ayuda"},
+    }
+    expanded = set(terms)
+    for term in list(terms):
+        expanded.update(expansions.get(term, set()))
     ranked = []
     for idx, article in enumerate(candidates):
-        haystack = (
-            article.get("title", "") + " " +
-            article.get("content_for_evaluation_only", "")[:2600]
-        ).lower()
-        hits = sum(1 for term in terms if term in haystack)
-        if hits:
-            ranked.append((hits, idx))
+        title = fold_text(article.get("title", ""))
+        excerpt = fold_text(article.get("content_for_evaluation_only", "")[:3500])
+        context = fold_text(article.get("search_context", "")[:1100])
+        haystack = title + " " + excerpt + " " + context
+        title_hits = sum(1 for term in expanded if term in title)
+        body_hits = sum(1 for term in expanded if term in excerpt)
+        context_hits = sum(1 for term in expanded if term in context)
+        score = title_hits * 4 + body_hits + context_hits
+        # Strong title-level relevance can stand on its own; avoid requiring exact phrasing.
+        if score >= 2:
+            ranked.append((score, idx))
     ranked.sort(key=lambda item: item[0], reverse=True)
     return {
         "selected": [
-            {"id": idx, "score": min(5, max(3, hits)), "facet": "Tema relacionado"}
-            for hits, idx in ranked[:8]
+            {"id": idx, "score": min(5, max(3, score // 2)), "facet": "Tema relacionado"}
+            for score, idx in ranked[:10]
         ],
         "missing_facets": [],
         "followup_queries": [],
     }
-
 
 def evaluate(question: str, facets: list, searched: list, candidates: list):
     payload_articles = []
@@ -381,9 +429,26 @@ def evaluate(question: str, facets: list, searched: list, candidates: list):
             "articles": payload_articles,
         },
         EVALUATE_SCHEMA,
-        "wol_relevance_review_v8",
+        "wol_relevance_review_v9",
     )
-    return result if result is not None else lexical_fallback(question, candidates)
+    local = lexical_fallback(question, candidates)
+    if result is None:
+        print("Relevance evaluator: using local fallback (AI unavailable).")
+        return local
+
+    # Do not let an overly strict model response erase every valid candidate.
+    ai_selected = result.get("selected", [])
+    local_selected = local.get("selected", [])
+    known_ids = {item.get("id") for item in ai_selected if isinstance(item, dict)}
+    recovered = [item for item in local_selected if item.get("id") not in known_ids]
+    if not ai_selected and recovered:
+        print("Relevance evaluator: AI selected zero; recovering locally ranked candidates.")
+        result["selected"] = recovered[:8]
+    elif recovered:
+        # Add a small recall-oriented safety net without replacing AI judgments.
+        print(f"Relevance evaluator: adding {min(4, len(recovered))} locally relevant candidates.")
+        result["selected"] = ai_selected + recovered[:4]
+    return result
 
 
 def format_selected(candidates: list, evaluation: dict):
@@ -421,19 +486,19 @@ def health():
         "ok": True,
         "ai_configured": bool(os.getenv("OPENAI_API_KEY")),
         "wol_search_enabled": True,
-        "version": "8.0",
+        "version": "9.0",
     }
 
 
 @app.post("/api/search")
 def search(req: SearchRequest):
     plan = make_plan(req.question)
-    queries = plan.get("queries", [])[:7]
+    queries = plan.get("queries", [])[:10]
 
     # First research pass: multiple independent searches in WOL.
     collected, seen_urls, errors = [], set(), []
     for query in queries:
-        found, error = fetch_search_results(query, limit=7)
+        found, error = fetch_search_results(query, limit=9)
         if error:
             errors.append(error)
         for article in found:
@@ -444,7 +509,8 @@ def search(req: SearchRequest):
 
     # Read a bounded set of unique WOL articles. Text stays in memory and is
     # sent only to the relevance evaluator; it is never returned to the browser.
-    inspected = [fetch_article(article) for article in collected[:22]]
+    print(f"WOL first pass: queries={len(queries)} unique_candidates={len(collected)} errors={len(errors)}")
+    inspected = [fetch_article(article) for article in collected[:30]]
     evaluation = evaluate(req.question, plan.get("facets", []), queries, inspected)
 
     # Second pass: identify coverage gaps and search only for those missing aspects.
@@ -481,10 +547,11 @@ def search(req: SearchRequest):
     articles = format_selected(inspected, evaluation)
 
     return {
-        "version": "8.0",
+        "version": "9.0",
         "articles": articles,
         "articles_reviewed": len(inspected),
         "searches_performed": len(queries) + len(followups),
+        "candidate_articles_found": len(collected),
         "message": "" if articles else "No encontramos artículos que podamos confirmar como pertinentes. Probá con otra formulación.",
         "wol_errors": list(dict.fromkeys(errors)),
         "source": "WOL",

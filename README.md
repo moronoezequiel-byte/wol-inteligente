@@ -1,14 +1,14 @@
-# WOL Inteligente v8
+# WOL Inteligente v9
 
 Buscador y asistente de investigación que consulta exclusivamente artículos de la Biblioteca en línea Watchtower (WOL).
 
-## Qué cambia en v8
-- La interfaz muestra directamente los artículos; no muestra la interpretación ni las consultas internas.
-- La IA crea un plan de búsqueda con consultas diferentes y complementarias.
-- Consulta WOL directamente y elimina enlaces duplicados.
-- Lee temporalmente fragmentos de artículos de WOL para evaluar pertinencia.
-- Evalúa qué aspectos de la pregunta están cubiertos y puede hacer una segunda ronda de búsquedas para cubrir aspectos faltantes.
-- Presenta únicamente títulos, datos bibliográficos que WOL permita detectar y enlaces directos a los artículos originales.
+## Cambios de v9
+- Extracción más tolerante de enlaces de artículos de WOL, incluidos enlaces relativos y distintos contenedores HTML.
+- Registros técnicos en Render para distinguir errores HTTP, páginas recibidas sin enlaces reconocibles y cantidad de candidatos encontrados.
+- Más consultas complementarias para temas de desánimo, vejez y edad avanzada.
+- Evaluación con respaldo local: si la IA descarta todos los candidatos, se recuperan artículos pertinentes mediante coincidencias ampliadas; también se agregan unos pocos candidatos locales cuando ayudan a mejorar la cobertura.
+- Se revisan hasta 30 artículos únicos en la primera etapa.
+- La interfaz conserva el diseño sencillo de la versión anterior y muestra únicamente títulos, datos bibliográficos disponibles y enlaces directos a WOL.
 - No genera resúmenes ni respuestas doctrinales.
 
 ## Instalación en Render
@@ -26,11 +26,12 @@ Variables de entorno:
 - `OPENAI_API_KEY`: configurar como variable privada en Render. Nunca subirla a GitHub.
 - `OPENAI_MODEL`: modelo disponible para tu API. Si ya está configurado en Render, se conserva.
 
-Health check: `/health`
+Health check: `/health` (debe informar versión `9.0`).
 
-## Importante
+## Prueba recomendada
+Después de desplegar, buscar exactamente: **Cómo afrontar el desánimo en la vejez**. WOL tiene artículos conocidos sobre la alegría en la vejez y las dificultades de la edad avanzada; esta consulta sirve como prueba de regresión.
+
+## Privacidad y alcance
 - El texto de WOL se procesa temporalmente para evaluar relevancia. No se guarda en una base de datos ni se envía a la interfaz.
 - La aplicación muestra enlaces a los artículos originales; no reproduce el contenido completo.
-- La extracción depende de la estructura y disponibilidad de WOL. Si WOL cambia su sitio o limita solicitudes, habrá que adaptar el extractor.
-- Si la API de IA no está disponible, se usa un modo local de respaldo menos preciso.
-- La versión no se considera validada hasta probarla desplegada contra WOL y la API configurada.
+- La versión debe probarse desplegada contra WOL y la API configurada antes de considerarse validada.
