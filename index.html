@@ -1,145 +1,34 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#0b1020">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b1020">
 <title>WOL Inteligente</title>
 <style>
 :root{color-scheme:dark;--bg:#0b1020;--panel:#151d31;--line:#2c3a57;--text:#f3f6fc;--muted:#aab6cc;--accent:#8bb7ff;--green:#83d6ad}
-*{box-sizing:border-box}
-body{margin:0;background:radial-gradient(ellipse at top,#172541 0,#0b1020 55%);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
-main{max-width:850px;margin:auto;padding:28px 16px 56px}
-.brand{text-align:center;margin:10px 0 28px}
-.brand h1{font-size:clamp(30px,7vw,46px);margin:0;letter-spacing:-1.5px}
-.brand p{color:var(--muted);margin:6px 0}
-.tag{display:inline-block;color:var(--green);border:1px solid #315c50;border-radius:99px;padding:4px 10px;font-size:12px;margin-top:8px}
-.panel{background:rgba(21,29,49,.94);border:1px solid var(--line);border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 12px 35px #0002}
-label{display:block;font-weight:650;margin-bottom:10px}
-textarea{width:100%;min-height:118px;resize:vertical;background:#0d1527;border:1px solid #405171;border-radius:12px;padding:14px;color:var(--text);font:inherit;outline:none}
-textarea:focus{border-color:var(--accent)}
-button{width:100%;border:0;border-radius:12px;padding:14px;margin-top:12px;background:#8bb7ff;color:#081326;font-weight:800;font-size:15px;cursor:pointer}
-button:disabled{opacity:.55;cursor:wait}
-.hint,.muted{color:var(--muted);font-size:13px}
-.status{margin-top:12px;color:var(--muted);font-size:14px;min-height:22px}
-.section-title{font-size:18px;margin:0 0 12px}
-.article{padding:15px 0;border-top:1px solid var(--line)}
-.article:first-child{border-top:0;padding-top:0}
-.article a{color:#b9d3ff;font-weight:700;text-decoration:none;font-size:16px}
-.article a:hover{text-decoration:underline}
-.meta{font-size:12px;color:var(--muted);margin-top:5px}
-.empty{color:var(--muted);padding:12px 0}
-.hidden{display:none}
-.foot{text-align:center;color:var(--muted);font-size:12px;margin:24px 0}
-.spinner{display:inline-block;width:13px;height:13px;border:2px solid #62718b;border-top-color:#b9d3ff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:7px}
-@keyframes spin{to{transform:rotate(360deg)}}
-</style>
-</head>
-<body>
-<main>
-<header class="brand">
-  <h1>WOL Inteligente</h1>
-  <p>Un asistente para investigar en la Biblioteca en línea Watchtower</p>
-  <span class="tag">WOL como única fuente de información</span>
-</header>
-
-<section class="panel">
-  <label for="question">¿Qué necesitás encontrar?</label>
-  <textarea id="question" placeholder="Por ejemplo: ¿Cómo puedo dirigir el Estudio de La Atalaya y lograr que todos participen?"></textarea>
-  <button id="searchBtn" type="button">BUSCAR EN WOL</button>
-  <div class="hint" style="margin-top:10px">Encontrá artículos originales relacionados con tu pregunta.</div>
-  <div id="status" class="status" aria-live="polite"></div>
-</section>
-
-<section id="results" class="panel hidden">
-  <h2 class="section-title">Artículos encontrados</h2>
-  <div class="muted" id="count"></div>
-  <div id="articles" style="margin-top:14px"></div>
-</section>
-
-<footer class="foot">Los resultados enlazan a los artículos originales de WOL.</footer>
-</main>
-
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#172541 0,#0b1020 55%);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
+main{max-width:850px;margin:auto;padding:28px 16px 56px}.brand{text-align:center;margin:10px 0 28px}.brand h1{font-size:clamp(30px,7vw,46px);margin:0;letter-spacing:-1.5px}.brand p{color:var(--muted);margin:6px 0}.tag{display:inline-block;color:var(--green);border:1px solid #315c50;border-radius:99px;padding:4px 10px;font-size:12px;margin-top:8px}
+.panel{background:rgba(21,29,49,.94);border:1px solid var(--line);border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 12px 35px #0002}label{display:block;font-weight:650;margin-bottom:10px}
+textarea{width:100%;min-height:118px;resize:vertical;background:#0d1527;border:1px solid #405171;border-radius:12px;padding:14px;color:var(--text);font:inherit;outline:none}textarea:focus{border-color:var(--accent)}
+button{width:100%;border:0;border-radius:12px;padding:14px;margin-top:12px;background:#8bb7ff;color:#081326;font-weight:800;font-size:15px;cursor:pointer}button:disabled{opacity:.55;cursor:wait}
+.hint,.muted{color:var(--muted);font-size:13px}.status{margin-top:12px;color:var(--muted);font-size:14px;min-height:22px}.section-title{font-size:18px;margin:0 0 12px}
+.article{padding:15px 0;border-top:1px solid var(--line)}.article:first-child{border-top:0;padding-top:0}.article a{color:#b9d3ff;font-weight:700;text-decoration:none;font-size:16px}.article a:hover{text-decoration:underline}.meta{font-size:12px;color:var(--muted);margin-top:5px}.empty{color:var(--muted);padding:12px 0}.hidden{display:none}.foot{text-align:center;color:var(--muted);font-size:12px;margin:24px 0}
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid #62718b;border-top-color:#b9d3ff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:7px}@keyframes spin{to{transform:rotate(360deg)}}
+</style></head><body><main>
+<header class="brand"><h1>WOL Inteligente</h1><p>Un asistente para investigar en la Biblioteca en línea Watchtower</p><span class="tag">WOL como única fuente de información</span></header>
+<section class="panel"><label for="question">¿Qué necesitás encontrar?</label>
+<textarea id="question" placeholder="Por ejemplo: ¿Cómo puedo dirigir el Estudio de La Atalaya y lograr que todos participen?"></textarea>
+<button id="searchBtn" type="button">BUSCAR EN WOL</button><div class="hint" style="margin-top:10px">Encontrá artículos originales relacionados con tu pregunta.</div><div id="status" class="status" aria-live="polite"></div></section>
+<section id="results" class="panel hidden"><h2 class="section-title">Artículos encontrados</h2><div class="muted" id="count"></div><div id="articles" style="margin-top:14px"></div></section>
+<footer class="foot">Los resultados enlazan a los artículos originales de WOL.</footer></main>
 <script>
-const question = document.getElementById('question');
-const button = document.getElementById('searchBtn');
-const statusBox = document.getElementById('status');
-const resultsBox = document.getElementById('results');
-
-button.addEventListener('click', runSearch);
-question.addEventListener('keydown', event => {
-  if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') runSearch();
-});
-
-async function runSearch() {
-  const q = question.value.trim();
-  if (q.length < 3) {
-    setStatus('Escribí una pregunta para comenzar.');
-    return;
-  }
-
-  button.disabled = true;
-  button.textContent = 'BUSCANDO…';
-  resultsBox.classList.add('hidden');
-  setStatus('<span class="spinner"></span>Buscando y revisando artículos de WOL…', true);
-
-  try {
-    const response = await fetch('/api/search', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({question: q})
-    });
-    if (!response.ok) throw new Error('El servidor respondió con un error (' + response.status + ').');
-    const data = await response.json();
-
-    const list = document.getElementById('articles');
-    list.replaceChildren();
-    const articles = data.articles || [];
-    document.getElementById('count').textContent = articles.length + (articles.length === 1 ? ' artículo' : ' artículos');
-
-    if (articles.length) {
-      articles.forEach(article => {
-        const row = document.createElement('div');
-        row.className = 'article';
-
-        const link = document.createElement('a');
-        link.href = article.url;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.textContent = article.title;
-
-        const meta = document.createElement('div');
-        meta.className = 'meta';
-        meta.textContent = article.publication || 'Biblioteca en línea Watchtower';
-
-        row.append(link, meta);
-        list.appendChild(row);
-      });
-    } else {
-      const empty = document.createElement('div');
-      empty.className = 'empty';
-      empty.textContent = data.message || 'No se encontraron artículos.';
-      list.appendChild(empty);
-    }
-
-    resultsBox.classList.remove('hidden');
-    if (data.wol_errors && data.wol_errors.length) {
-      setStatus('La búsqueda terminó, pero WOL no respondió a todas las consultas.');
-    } else {
-      setStatus('Búsqueda terminada.');
-    }
-  } catch (error) {
-    setStatus('No se pudo completar la búsqueda: ' + error.message + ' Revisá que el servicio esté activo.');
-  } finally {
-    button.disabled = false;
-    button.textContent = 'BUSCAR EN WOL';
-  }
-}
-
-function setStatus(message, allowSpinner = false) {
-  if (allowSpinner) statusBox.innerHTML = message;
-  else statusBox.textContent = message;
-}
-</script>
-</body>
-</html>
+const question=document.getElementById('question'),button=document.getElementById('searchBtn'),statusBox=document.getElementById('status'),resultsBox=document.getElementById('results');
+button.addEventListener('click',runSearch);question.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&event.key==='Enter')runSearch()});
+async function runSearch(){const q=question.value.trim();if(q.length<3){setStatus('Escribí una pregunta para comenzar.');return}
+button.disabled=true;button.textContent='BUSCANDO…';resultsBox.classList.add('hidden');setStatus('<span class="spinner"></span>Buscando y revisando artículos de WOL…',true);
+try{const response=await fetch('/api/search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});if(!response.ok)throw new Error('El servidor respondió con un error ('+response.status+').');
+const data=await response.json(),list=document.getElementById('articles');list.replaceChildren();const articles=data.articles||[];document.getElementById('count').textContent=articles.length+(articles.length===1?' artículo':' artículos');
+if(articles.length){articles.forEach(article=>{const row=document.createElement('div');row.className='article';const link=document.createElement('a');link.href=article.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=article.title;const meta=document.createElement('div');meta.className='meta';meta.textContent=article.publication||'Biblioteca en línea Watchtower';row.append(link,meta);list.appendChild(row)})}else{const empty=document.createElement('div');empty.className='empty';empty.textContent=data.message||'No se encontraron artículos.';list.appendChild(empty)}
+resultsBox.classList.remove('hidden');setStatus(data.wol_errors&&data.wol_errors.length?'La búsqueda terminó, pero WOL no respondió a todas las consultas.':'Búsqueda terminada.');
+}catch(error){setStatus('No se pudo completar la búsqueda: '+error.message+' Revisá que el servicio esté activo.')}finally{button.disabled=false;button.textContent='BUSCAR EN WOL'}}
+function setStatus(message,allowSpinner=false){if(allowSpinner)statusBox.innerHTML=message;else statusBox.textContent=message}
+</script></body></html>
