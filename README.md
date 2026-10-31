@@ -1,37 +1,36 @@
-# WOL Inteligente v7
+# WOL Inteligente v8
 
-Buscador y asistente de investigación que consulta exclusivamente Watchtower ONLINE LIBRARY (WOL).
+Buscador y asistente de investigación que consulta exclusivamente artículos de la Biblioteca en línea Watchtower (WOL).
 
-## Qué hace
-- Interpreta la necesidad expresada en lenguaje natural.
-- Genera de 4 a 6 búsquedas distintas y complementarias.
-- Consulta WOL directamente en español.
-- Abre y lee temporalmente fragmentos de los artículos encontrados para evaluar su pertinencia.
-- Usa IA para seleccionar artículos pertinentes y etiquetar qué necesidad cubren.
-- Muestra únicamente títulos, datos bibliográficos disponibles y enlaces directos a los artículos originales. No genera resúmenes ni respuestas doctrinales.
+## Qué cambia en v8
+- La interfaz muestra directamente los artículos; no muestra la interpretación ni las consultas internas.
+- La IA crea un plan de búsqueda con consultas diferentes y complementarias.
+- Consulta WOL directamente y elimina enlaces duplicados.
+- Lee temporalmente fragmentos de artículos de WOL para evaluar pertinencia.
+- Evalúa qué aspectos de la pregunta están cubiertos y puede hacer una segunda ronda de búsquedas para cubrir aspectos faltantes.
+- Presenta únicamente títulos, datos bibliográficos que WOL permita detectar y enlaces directos a los artículos originales.
+- No genera resúmenes ni respuestas doctrinales.
 
-El contenido de los artículos se procesa en memoria para evaluar relevancia; no se guarda en una base de datos ni se muestra en la interfaz.
-
-## Render
+## Instalación en Render
 Build command:
-
 ```bash
 pip install -r requirements.txt
 ```
 
 Start command:
-
 ```bash
 uvicorn main:app --host 0.0.0.0 --port $PORT
 ```
 
-Environment variables:
-- `OPENAI_API_KEY`: clave privada de API (configurar solo en Render, nunca en GitHub).
-- `OPENAI_MODEL`: modelo habilitado para tu cuenta/API. Si no se define, el código usa `gpt-6`.
+Variables de entorno:
+- `OPENAI_API_KEY`: configurar como variable privada en Render. Nunca subirla a GitHub.
+- `OPENAI_MODEL`: modelo disponible para tu API. Si ya está configurado en Render, se conserva.
 
 Health check: `/health`
 
-## Notas
-- La consulta a WOL depende de la disponibilidad y del HTML que entregue WOL. Si cambia su estructura, puede ser necesario ajustar el extractor.
-- El servicio no copia ni redistribuye el corpus de WOL; muestra enlaces a los artículos originales.
-- El ranking automático solo puede evaluar el texto que el extractor consiga leer. Los resultados deben verificarse abriendo el artículo original.
+## Importante
+- El texto de WOL se procesa temporalmente para evaluar relevancia. No se guarda en una base de datos ni se envía a la interfaz.
+- La aplicación muestra enlaces a los artículos originales; no reproduce el contenido completo.
+- La extracción depende de la estructura y disponibilidad de WOL. Si WOL cambia su sitio o limita solicitudes, habrá que adaptar el extractor.
+- Si la API de IA no está disponible, se usa un modo local de respaldo menos preciso.
+- La versión no se considera validada hasta probarla desplegada contra WOL y la API configurada.
