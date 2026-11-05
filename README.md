@@ -1,5 +1,3 @@
-# WOL Inteligente v11
+# WOL Inteligente V11.1
 
-Motor de investigación iterativa sobre WOL. La IA interpreta, descubre vocabulario real de WOL, busca en rondas, lee artículos, evalúa pertinencia y realiza una auditoría adversarial antes de mostrar resultados.
-
-Fuente única: https://wol.jw.org
+Clasificación por tipo de consulta, criterios de pertinencia adaptados, descubrimiento de vocabulario en documentos reales de WOL, búsqueda adaptativa y auditoría adversarial. Mantiene la interfaz visual. `/health` informa versión 11.1.
